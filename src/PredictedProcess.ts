@@ -5,6 +5,9 @@ export class PredictedProcess {
   private _resultCache: Map<string, any>;
   private _isLocked: boolean = false;
 
+  private _executionQueue: Array<() => Promise<void>> = [];
+  private _isProcessing: boolean = false;
+
   public constructor(
     public readonly id: number,
     public readonly command: string,
@@ -33,8 +36,7 @@ export class PredictedProcess {
   }
 
   public async run(signal?: AbortSignal): Promise<void> {
-    await this.waitForUnlock();
-    this._isLocked = true;
+
 
     const signalKey = signal ? 'signal-' + this.id : 'no-signal-' + this.id;
     const cacheKey = this.command + signalKey;
@@ -53,6 +55,7 @@ export class PredictedProcess {
         reject(new Error('Signal already aborted'));
         return;
       }
+    });
 
       this._childProcess = spawn(this.command, {
         shell: true,
@@ -121,18 +124,17 @@ export class PredictedProcess {
     }
   }
 
-  private waitForUnlock(): Promise<void> {
-    return new Promise((resolve) => {
-      const checkLock = () => {
-        if (!this._isLocked) {
-          resolve();
-        } else {
-          // Check again after a delay
-          setTimeout(checkLock, 1); // 100 ms delay
-        }
-      };
-      console.log("inside", this._isLocked)
-      checkLock();
-    });
+  private async processQueue() {
+    if (this._executionQueue.length === 0) {
+      this._isProcessing = false;
+      return;
+    }
+
+    this._isProcessing = true;
+    const nextExecution = this._executionQueue.shift();
+    if (nextExecution) {
+      await nextExecution();
+      this.processQueue();
+    }
   }
 }
