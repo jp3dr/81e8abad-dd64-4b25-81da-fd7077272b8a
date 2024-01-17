@@ -14,17 +14,16 @@ export class PredictedProcess {
   private isCommandValid(commandString: string) {
     // Split the command string by semicolon
     const commands = commandString.split(';').map(cmd => cmd.trim());
+    const validCommandPatterns = [
+      /^echo "Process \d+"$/,
+      /^sleep \d+$/,
+      /^command [A-Za-z]$/,
+      new RegExp(`^test command$`)
+    ];
 
     // Check each command
     return commands.map(cmd => {
-      const processCommandPattern = /^echo "Process \d+"$/;
-      const sleepCommandPattern = /^sleep \d+$/;
-      const cmdCommandPattern = /^command \c+$/;
-
-      if (processCommandPattern.test(cmd) ||
-        sleepCommandPattern.test(cmd) ||
-        cmdCommandPattern.test(cmd) ||
-        cmd == `test command`) {
+      if (validCommandPatterns.some(pattern => pattern.test(cmd))) {
         return true;
       } else {
         return false;
