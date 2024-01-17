@@ -25,8 +25,11 @@ export class PredictedProcess {
    *
    */
   public memoize(): PredictedProcess {
-    // TODO: Implement this.
-    return this;
+    const memoizedProcess = new PredictedProcess(this.id, this.command);
+    memoizedProcess._resultCache = this._resultCache;
+    return memoizedProcess;
+  }
+
   private cleanup() {
     this._childProcess?.removeAllListeners();
     this._childProcess = null;
