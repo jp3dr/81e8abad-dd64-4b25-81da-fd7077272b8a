@@ -37,7 +37,14 @@ export class PredictedProcess {
       return this._resultCache.get(this.command);
     }
 
+    const validCommand = await this.isCommandValid(this.command);
+
     return new Promise((resolve, reject) => {
+      if (validCommand.includes(false)) {
+        console.log("command: ", this.command);
+        reject(new Error('Invalid comand'));
+      }
+
       this._childProcess = spawn(this.command, {
         shell: true,
         stdio: 'ignore',
