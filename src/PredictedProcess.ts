@@ -50,53 +50,15 @@ export class PredictedProcess {
     }
 
     const processPromise: any = new Promise((resolve, reject) => {
+      this._executionQueue.push(() => this.executeRun(resolve, reject, cacheKey, signal));
 
-      if (signal && signal.aborted) {
-        reject(new Error('Signal already aborted'));
-        return;
+      // Process the queue if not already processing
+      if (!this._isProcessing) {
+        this.processQueue();
       }
     });
 
-      this._childProcess = spawn(this.command, {
-        shell: true,
-        stdio: 'ignore',
-      });
-
-      if (signal) {
-
-        const abortHandler = () => {
-          if (this._childProcess && !this._childProcess.killed) {
-            this._childProcess.kill();
-            this.cleanup();
-            reject(new Error('Process aborted'));
-          }
-        };
-
-        signal.addEventListener('abort', abortHandler);
-        signal.addEventListener('close', abortHandler);
-      }
-
-      this._childProcess.on('close', (code) => {
-        this.cleanup();
-        const result = code === 0 ? 'resolve' : 'reject';
-        this._resultCache.set(this.command + signalKey, result);
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`Process exited with code ${code}`));
-        }
-      });
-
-      this._childProcess.on('error', (err) => {
-        this.cleanup();
-        reject(err);
-      });
-
-    });
-
-    return processPromise.finally(() => {
-      this._isLocked = false;
-    });
+    return processPromise;
   }
 
   public memoize(): PredictedProcess {
@@ -105,6 +67,49 @@ export class PredictedProcess {
     return memoizedProcess;
   }
 
+  private async executeRun(resolve: Function, reject: Function, cacheKey: string, signal?: AbortSignal) {
+
+    if (signal && signal.aborted) {
+      reject(new Error('Signal already aborted'));
+      return;
+    }
+
+    this._childProcess = spawn(this.command, {
+      shell: true,
+      stdio: 'ignore',
+    });
+
+    if (signal) {
+
+      const abortHandler = () => {
+        if (this._childProcess && !this._childProcess.killed) {
+          this._childProcess.kill();
+          this.cleanup();
+          reject(new Error('Process aborted'));
+        }
+      };
+
+      signal.addEventListener('abort', abortHandler);
+      signal.addEventListener('close', abortHandler);
+    }
+
+    this._childProcess?.on('close', (code) => {
+      this.cleanup();
+      const result = code === 0 ? 'resolve' : 'reject';
+      this._resultCache.set(cacheKey, result);
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`Process exited with code ${code}`));
+      }
+    });
+
+    this._childProcess?.on('error', (err) => {
+      this.cleanup();
+      reject(err);
+    });
+
+  }
   private cleanup() {
     if (this._childProcess) {
       this._childProcess?.removeAllListeners();
@@ -137,4 +142,6 @@ export class PredictedProcess {
       this.processQueue();
     }
   }
+
+
 }
