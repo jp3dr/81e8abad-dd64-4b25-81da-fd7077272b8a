@@ -33,8 +33,8 @@ export class PredictedProcess {
   }
 
   public async run(signal?: AbortSignal): Promise<void> {
-    this._isLocked = true;
     await this.waitForUnlock();
+    this._isLocked = true;
 
     const signalKey = signal ? 'signal-' + this.id : 'no-signal-' + this.id;
     const cacheKey = this.command + signalKey;
