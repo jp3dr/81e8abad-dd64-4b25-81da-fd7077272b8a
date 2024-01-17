@@ -71,8 +71,9 @@ export class PredictedProcess {
 
       this._childProcess.on('close', (code) => {
         this.cleanup();
+        const result = code === 0 ? 'resolve' : 'reject';
+        this._resultCache.set(this.command + signalKey, result);
         if (code === 0) {
-          this._resultCache.set(this.command, resolve);
           resolve();
         } else {
           reject(new Error(`Process exited with code ${code}`));
