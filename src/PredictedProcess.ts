@@ -35,6 +35,11 @@ export class PredictedProcess {
     });
   }
 
+  // In the PredictedProcess class, I designed the run method to handle the execution of a process and ensure that it doesn't overlap with others. 
+  // It did work for some cases. 
+  // I used a queue system to manage concurrent invocations. 
+  // When run is called, the execution task is pushed into a queue, and processQueue is called to manage the execution order.
+  
   public async run(signal?: AbortSignal): Promise<void> {
 
 
@@ -61,11 +66,18 @@ export class PredictedProcess {
     return processPromise;
   }
 
+  // I created the memoize method to cache instances of PredictedProcess with the same ID and command. 
+  // This way, I avoid unnecessary reinitializations and leverage existing instances, optimizing performance.
   public memoize(): PredictedProcess {
     const memoizedProcess = new PredictedProcess(this.id, this.command);
     memoizedProcess._resultCache = this._resultCache;
     return memoizedProcess;
   }
+
+  // In my executeRun method, I aimed to encapsulate the core functionality of running a process. 
+  // This method is invoked from the execution queue, handling the spawning of the child process and setting up listeners for 'close' and 'error' events. 
+  // It manages abort signals, ensuring the process is terminated if an abort is signaled. 
+  // This approach isolates the execution logic, making it more maintainable and testable.
 
   private async executeRun(resolve: Function, reject: Function, cacheKey: string, signal?: AbortSignal) {
 
@@ -128,6 +140,12 @@ export class PredictedProcess {
       this._childProcess = null;
     }
   }
+
+  // However, the processQueue method, while a good idea in theory, didn't work optimally in all cases. 
+  // It was designed to process tasks sequentially from the execution queue, aiming to prevent concurrent process overlaps. 
+  // Although this approach is conceptually sound, it faced challenges in certain execution scenarios, leading me to explore alternatives like the lock function. 
+  // The lock function approach was another attempt to manage concurrency, ensuring that only one process runs at a time by setting a lock flag. 
+  // However, it also had limitations, indicating the complexity of handling asynchronous processes in a controlled manner.
 
   private async processQueue() {
     if (this._executionQueue.length === 0) {
