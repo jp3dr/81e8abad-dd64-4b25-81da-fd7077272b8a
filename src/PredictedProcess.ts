@@ -33,8 +33,9 @@ export class PredictedProcess {
   }
 
   public async run(signal?: AbortSignal): Promise<void> {
-    if (this._resultCache.has(this.command)) {
-      return this._resultCache.get(this.command);
+    const signalKey = signal ? 'signal-' + this.id : 'no-signal-' + this.id;
+    if (this._resultCache.has(this.command + signalKey)) {
+      return this._resultCache.get(this.command + signalKey);
     }
 
     const validCommand = await this.isCommandValid(this.command);
