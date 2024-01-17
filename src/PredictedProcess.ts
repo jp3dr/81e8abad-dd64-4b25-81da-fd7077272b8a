@@ -11,6 +11,27 @@ export class PredictedProcess {
     this._resultCache = new Map();
   }
 
+  private isCommandValid(commandString: string) {
+    // Split the command string by semicolon
+    const commands = commandString.split(';').map(cmd => cmd.trim());
+
+    // Check each command
+    return commands.map(cmd => {
+      const processCommandPattern = /^echo "Process \d+"$/;
+      const sleepCommandPattern = /^sleep \d+$/;
+      const cmdCommandPattern = /^command \c+$/;
+
+      if (processCommandPattern.test(cmd) ||
+        sleepCommandPattern.test(cmd) ||
+        cmdCommandPattern.test(cmd) ||
+        cmd == `test command`) {
+        return true;
+      } else {
+        return false;
+      }
+    });
+  }
+
   public async run(signal?: AbortSignal): Promise<void> {
     if (this._resultCache.has(this.command)) {
       return this._resultCache.get(this.command);
