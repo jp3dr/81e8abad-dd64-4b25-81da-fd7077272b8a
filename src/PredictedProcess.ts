@@ -41,9 +41,8 @@ export class PredictedProcess {
 
     const validCommand = await this.isCommandValid(this.command);
 
-    return new Promise((resolve, reject) => {
+    const processPromise: any = new Promise((resolve, reject) => {
       if (validCommand.includes(false)) {
-        console.log("command: ", this.command);
         reject(new Error('Invalid comand'));
       }
 
@@ -85,7 +84,9 @@ export class PredictedProcess {
         this.cleanup();
         reject(err);
       });
+
     });
+    return processPromise;
   }
 
   public memoize(): PredictedProcess {
