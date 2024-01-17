@@ -15,15 +15,6 @@ export class PredictedProcess {
     // TODO: Implement this.
   }
 
-  /**
-   * Returns a memoized version of `PredictedProcess`.
-   *
-   * WRITE UP:
-   * (Please provide a detailed explanation of your approach, specifically the reasoning behind your design decisions. This can be done _after_ the 1h30m time limit.)
-   *
-   * ...
-   *
-   */
   public memoize(): PredictedProcess {
     const memoizedProcess = new PredictedProcess(this.id, this.command);
     memoizedProcess._resultCache = this._resultCache;
@@ -34,5 +25,12 @@ export class PredictedProcess {
     this._childProcess?.removeAllListeners();
     this._childProcess = null;
   }
+
+  public abort(): void {
+    if (this._childProcess && !this._childProcess.killed) {
+      this.cleanup();
+      this._childProcess.kill();
+      this._childProcess = null;
+    }
   }
 }
