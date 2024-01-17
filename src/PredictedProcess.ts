@@ -33,5 +33,9 @@ export class PredictedProcess {
   public memoize(): PredictedProcess {
     // TODO: Implement this.
     return this;
+  private cleanup() {
+    this._childProcess?.removeAllListeners();
+    this._childProcess = null;
+  }
   }
 }
