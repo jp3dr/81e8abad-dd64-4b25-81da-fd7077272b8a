@@ -35,6 +35,24 @@ export class PredictedProcessesManager {
    *
    */
   public async runAll(signal?: AbortSignal): Promise<void> {
-    // TODO: Implement this.
+    let aborted = false;
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        aborted = true;
+        this._processes.forEach(process => process.abort());
+      });
+    }
+
+    const results = await Promise.allSettled(this._processes.map(process => process.run(signal)));
+
+    if (aborted) {
+      throw new Error('Execution aborted');
+    }
+
+    const rejected = results.find(result => result.status === 'rejected');
+    if (rejected) {
+      throw new Error('At least one process failed');
+    }
   }
+
 }
