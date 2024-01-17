@@ -52,10 +52,21 @@ export class PredictedProcess {
       });
 
       if (signal) {
-        signal.addEventListener('abort', () => {
-          this._childProcess?.kill();
-          reject(new Error('Process aborted'));
-        });
+        if (signal.aborted) {
+          reject(new Error('Signal already aborted'));
+          return;
+        }
+
+
+        const abortHandler = () => {
+          if (this._childProcess && !this._childProcess.killed) {
+            this._childProcess.kill();
+            this.cleanup();
+            reject(new Error('Process aborted'));
+          }
+        };
+
+        signal.addEventListener('abort', abortHandler);
       }
 
       this._childProcess.on('close', (code) => {
