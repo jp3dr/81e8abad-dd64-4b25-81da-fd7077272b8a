@@ -1,4 +1,4 @@
-import type { ChildProcess } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 
 export class PredictedProcess {
   private _childProcess: ChildProcess | null = null;
@@ -12,7 +12,38 @@ export class PredictedProcess {
   }
 
   public async run(signal?: AbortSignal): Promise<void> {
-    // TODO: Implement this.
+    if (this._resultCache.has(this.command)) {
+      return this._resultCache.get(this.command);
+    }
+
+    return new Promise((resolve, reject) => {
+      this._childProcess = spawn(this.command, {
+        shell: true,
+        stdio: 'ignore',
+      });
+
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          this._childProcess?.kill();
+          reject(new Error('Process aborted'));
+        });
+      }
+
+      this._childProcess.on('close', (code) => {
+        this.cleanup();
+        if (code === 0) {
+          this._resultCache.set(this.command, resolve);
+          resolve();
+        } else {
+          reject(new Error(`Process exited with code ${code}`));
+        }
+      });
+
+      this._childProcess.on('error', (err) => {
+        this.cleanup();
+        reject(err);
+      });
+    });
   }
 
   public memoize(): PredictedProcess {
