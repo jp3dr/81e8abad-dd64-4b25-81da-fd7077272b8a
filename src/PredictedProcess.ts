@@ -74,6 +74,9 @@ export class PredictedProcess {
   }
 
   private cleanup() {
+    if (this._childProcess && !this._childProcess.killed) {
+      this._childProcess.kill();
+    }
     this._childProcess?.removeAllListeners();
     this._childProcess = null;
   }
