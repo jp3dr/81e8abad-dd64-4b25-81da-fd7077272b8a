@@ -135,8 +135,4 @@ export class PredictedProcess {
       checkLock();
     });
   }
-
-  private delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
 }
