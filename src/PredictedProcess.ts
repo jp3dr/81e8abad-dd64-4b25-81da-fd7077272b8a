@@ -3,6 +3,7 @@ import { spawn, ChildProcess } from 'child_process';
 export class PredictedProcess {
   private _childProcess: ChildProcess | null = null;
   private _resultCache: Map<string, any>;
+  private _isLocked: boolean = false;
 
   public constructor(
     public readonly id: number,
@@ -32,6 +33,9 @@ export class PredictedProcess {
   }
 
   public async run(signal?: AbortSignal): Promise<void> {
+    this._isLocked = true;
+    await this.waitForUnlock();
+
     const signalKey = signal ? 'signal-' + this.id : 'no-signal-' + this.id;
     const cacheKey = this.command + signalKey;
     if (this._resultCache.has(cacheKey)) {
@@ -39,11 +43,15 @@ export class PredictedProcess {
       return this._resultCache.get(cacheKey);
     }
 
-    const validCommand = await this.isCommandValid(this.command);
+    if (!(await this.isCommandValid(this.command)).every(Boolean)) {
+      throw new Error('Invalid command');
+    }
 
     const processPromise: any = new Promise((resolve, reject) => {
-      if (validCommand.includes(false)) {
-        reject(new Error('Invalid comand'));
+
+      if (signal && signal.aborted) {
+        reject(new Error('Signal already aborted'));
+        return;
       }
 
       this._childProcess = spawn(this.command, {
@@ -52,11 +60,6 @@ export class PredictedProcess {
       });
 
       if (signal) {
-        if (signal.aborted) {
-          reject(new Error('Signal already aborted'));
-          return;
-        }
-
 
         const abortHandler = () => {
           if (this._childProcess && !this._childProcess.killed) {
@@ -67,6 +70,7 @@ export class PredictedProcess {
         };
 
         signal.addEventListener('abort', abortHandler);
+        signal.addEventListener('close', abortHandler);
       }
 
       this._childProcess.on('close', (code) => {
@@ -86,7 +90,10 @@ export class PredictedProcess {
       });
 
     });
-    return processPromise;
+
+    return processPromise.finally(() => {
+      this._isLocked = false;
+    });
   }
 
   public memoize(): PredictedProcess {
@@ -96,10 +103,13 @@ export class PredictedProcess {
   }
 
   private cleanup() {
-    if (this._childProcess && !this._childProcess.killed) {
-      this._childProcess.kill();
+    if (this._childProcess) {
+      this._childProcess?.removeAllListeners();
+      if (!this._childProcess.killed) {
+        this._childProcess.kill();
+      }
     }
-    this._childProcess?.removeAllListeners();
+    this._isLocked = false;  // Release the lock before returning
     this._childProcess = null;
   }
 
@@ -109,5 +119,24 @@ export class PredictedProcess {
       this._childProcess.kill();
       this._childProcess = null;
     }
+  }
+
+  private waitForUnlock(): Promise<void> {
+    return new Promise((resolve) => {
+      const checkLock = () => {
+        if (!this._isLocked) {
+          resolve();
+        } else {
+          // Check again after a delay
+          setTimeout(checkLock, 1); // 100 ms delay
+        }
+      };
+      console.log("inside", this._isLocked)
+      checkLock();
+    });
+  }
+
+  private delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
